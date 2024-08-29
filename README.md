@@ -1,5 +1,3 @@
-Berikut adalah README yang menjelaskan eksperimen "Analisis Dampak Memori Leak dalam Aplikasi Multi-threaded" dalam bentuk yang siap di-upload ke GitHub.
-
 ---
 
 # Analisis Dampak Memori Leak dalam Aplikasi Multi-threaded
