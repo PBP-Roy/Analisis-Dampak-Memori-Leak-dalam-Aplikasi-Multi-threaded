@@ -28,53 +28,65 @@ Eksperimen dilakukan dengan mengembangkan sebuah aplikasi multi-threaded sederha
 Kode berikut ini digunakan untuk membuat aplikasi multi-threaded dengan memori leak:
 
 ```c
+#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
-#include <unistd.h>
 
 #define NUM_THREADS 10
 #define ALLOCATION_SIZE 1024 * 1024 // 1 MB
 
-void *leak_memory(void *arg) {
-    int thread_id = *(int *)arg;
+DWORD WINAPI leak_memory(LPVOID lpParam) {
+    int thread_id = *(int *)lpParam;
     printf("Thread %d started\n", thread_id);
 
     while (1) {
         void *memory = malloc(ALLOCATION_SIZE); // Allocate 1 MB memory
         if (memory == NULL) {
             printf("Thread %d: Memory allocation failed\n", thread_id);
-            pthread_exit(NULL);
+            return 1;
         }
         // Simulate some work with the memory (optional)
         for (int i = 0; i < ALLOCATION_SIZE; i++) {
             ((char*)memory)[i] = 0; // Touch memory to prevent optimization
         }
         // Note: No free() here, causing a memory leak
-        sleep(1); // Slow down the loop for observation
+        Sleep(1000); // Slow down the loop for observation
     }
+    return 0;
 }
 
 int main() {
-    pthread_t threads[NUM_THREADS];
+    HANDLE threads[NUM_THREADS];
     int thread_ids[NUM_THREADS];
-    
+
     // Create multiple threads
     for (int i = 0; i < NUM_THREADS; i++) {
         thread_ids[i] = i;
-        if (pthread_create(&threads[i], NULL, leak_memory, &thread_ids[i]) != 0) {
+        threads[i] = CreateThread(
+            NULL,       // Default security attributes
+            0,          // Default stack size
+            leak_memory,  // Thread function
+            &thread_ids[i], // Thread function argument
+            0,          // Default creation flags
+            NULL);      // Ignore the thread identifier
+
+        if (threads[i] == NULL) {
             printf("Error: Unable to create thread %d\n", i);
             return 1;
         }
     }
 
     // Wait for all threads to finish (they won't in this case)
+    WaitForMultipleObjects(NUM_THREADS, threads, TRUE, INFINITE);
+
+    // Close thread handles
     for (int i = 0; i < NUM_THREADS; i++) {
-        pthread_join(threads[i], NULL);
+        CloseHandle(threads[i]);
     }
 
     return 0;
 }
+
 ```
 
 ### Langkah 2: Kompilasi dan Eksekusi
